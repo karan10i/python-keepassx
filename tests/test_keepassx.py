@@ -197,6 +197,38 @@ class TestKeepassX(unittest.TestCase):
         # Verify we can read anything from the db.
         self.assertEqual(len(db.groups), 2)
 
+    def test_get_entry_with_category(self):
+        kdb_contents = open_data_file('password.kdb').read()
+        db = Database(kdb_contents, self.password)
+
+        # Create a "Backup" group explicitly for testing
+        backup_group = type('Group', (object,), {
+            'group_name': 'Backup',
+            'groupid': 999999,
+            'level': 0
+        })
+        db.groups.append(backup_group)
+
+        # Add an entry to the Backup category for testing
+        db.entries.append(
+            type('Entry', (object,), {
+                'title': 'backup_entry',
+                'uuid': 'backup_uuid',
+                'group': backup_group,
+                'username': 'backup_user',
+                'password': 'backup_pass',
+                'url': 'backup_url',
+                'notes': 'backup_notes',
+                'creation_time': datetime.now()
+            })
+        )
+
+        # Test retrieval with category filtering
+        entries = [entry for entry in db.entries if entry.group.group_name == 'Backup']
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].title, 'backup_entry')
+        self.assertEqual(entries[0].password, 'backup_pass')
+
 
 class TestEncodePassword(unittest.TestCase):
     def test_encode_ascii(self):

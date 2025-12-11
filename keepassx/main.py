@@ -79,19 +79,24 @@ def do_list(args):
 def do_get(args):
     db = create_db(args)
     try:
-        entry = _search_for_entry(db, args.entry_id)[0]
+        entries = _search_for_entry(db, args.entry_id)
+        if args.category:
+            entries = [entry for entry in entries if entry.group.group_name == args.category]
+        if not entries:
+            raise EntryNotFoundError("No entries found in the specified category.")
+        entry = entries[0]
     except EntryNotFoundError as e:
         sys.stderr.write(str(e))
         sys.stderr.write("\n")
         return
+
     default_fields = ['title', 'username', 'url', 'notes']
-    if args.entry_fields:
-        fields = args.entry_fields
-    else:
-        fields = default_fields
+    fields = args.entry_fields if args.entry_fields else default_fields
+
     sys.stderr.write('\n')
     for field in fields:
         print("%-10s %s" % (field + ':', getattr(entry, field)))
+
     if args.clipboard_copy:
         clipboard.copy(entry.password)
         sys.stderr.write("\nPassword has been copied to clipboard.\n")
@@ -160,6 +165,7 @@ def create_parser():
     get_parser.add_argument('-n', '--no-clipboard-copy', action="store_false",
                             dest="clipboard_copy", default=True,
                             help="Don't copy the password to the clipboard")
+    get_parser.add_argument('-c', '--category', help='Specify the category of the entry.')
     get_parser.set_defaults(run=do_get)
     return parser
 
